@@ -1,4 +1,4 @@
-name: Build EPUB
+name: Build and Release
 
 on:
   push:
@@ -12,22 +12,38 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # нужно для создания релиза
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build EPUB with Pandoc
+      - name: Build EPUB
         uses: docker://pandoc/core:3.1
         with:
           args: >-
             module_0.md module_1.md module_2.md
             --metadata-file=metadata.yaml
-            --toc
-            --toc-depth=1
+            --toc --toc-depth=1
             --output=1c-metadata-tree-book.epub
 
-      - name: Upload EPUB artifact
-        uses: actions/upload-artifact@v4
+      - name: Build FB2
+        uses: docker://pandoc/core:3.1
         with:
-          name: 1c-metadata-tree-book
-          path: 1c-metadata-tree-book.epub
+          args: >-
+            module_0.md module_1.md module_2.md
+            --metadata-file=metadata.yaml
+            --output=1c-metadata-tree-book.fb2
+            -t fb2
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Черновик книги
+          tag_name: build-${{ github.run_id }}
+          draft: true
+          files: |
+            1c-metadata-tree-book.epub
+            1c-metadata-tree-book.fb2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
