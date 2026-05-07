@@ -40,7 +40,7 @@
 
 Книга находится в активной разработке.  
 Готовые модули: 0, 1, 2 (черновики проходят редактуру).  
-План и концепция: [`metadata_tree_book_plan-4.md`](metadata_tree_book_plan-4.md)
+План и концепция: [`metadata_tree_book_plan.md`](metadata_tree_book_plan.md)
 
 ## Как работать с материалами
 
