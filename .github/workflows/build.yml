@@ -21,18 +21,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Read metadata
-        id: meta
+      - name: Generate build info
+        id: build
         run: |
-          pip install pyyaml -q
-          python3 - <<'EOF'
-          import yaml, os
-          with open("metadata.yaml") as f:
-              data = yaml.safe_load(f)
-          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write(f"title={data.get('title', 'book')}\n")
-              out.write(f"cover={data.get('cover-image', '')}\n")
-          EOF
+          BUILD_DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
+          BUILD_DATE_ISO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          GIT_REV=$(git rev-parse --short HEAD)
+          VERSION="rev. ${GIT_REV}, сборка ${BUILD_DATE}"
+          echo "date_iso=${BUILD_DATE_ISO}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}"         >> $GITHUB_OUTPUT
+
+          # Write a separate metadata file with build info
+          cat > build-info.yaml <<YAML
+          date: '${BUILD_DATE_ISO}'
+          version: '${VERSION}'
+          YAML
 
       - name: Assemble book.md
         run: |
@@ -40,7 +43,7 @@ jobs:
           import os, glob
           files = sorted(glob.glob("chapters/**/*.md", recursive=True))
           with open("book.md", "w", encoding="utf-8") as out:
-              for i, f in enumerate(files):
+              for f in files:
                   with open(f, encoding="utf-8") as inp:
                       out.write(inp.read())
                   out.write("\n\n")
@@ -53,6 +56,7 @@ jobs:
           args: >-
             book.md
             --metadata-file=metadata.yaml
+            --metadata-file=build-info.yaml
             --toc --toc-depth=2
             --output=1c-metadata-tree-book.epub
 
@@ -62,6 +66,7 @@ jobs:
           args: >-
             book.md
             --metadata-file=metadata.yaml
+            --metadata-file=build-info.yaml
             --output=1c-metadata-tree-book.fb2
             -t fb2
 
@@ -71,6 +76,7 @@ jobs:
           args: >-
             book.md
             --metadata-file=metadata.yaml
+            --metadata-file=build-info.yaml
             --toc --toc-depth=2
             --standalone
             --output=1c-metadata-tree-book.html
@@ -81,15 +87,19 @@ jobs:
           args: >-
             book.md
             --metadata-file=metadata.yaml
+            --metadata-file=build-info.yaml
             --toc --toc-depth=2
             --output=1c-metadata-tree-book.docx
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Черновик книги
+          name: "Черновик книги (${{ steps.build.outputs.version }})"
           tag_name: draft-${{ github.run_id }}
           draft: true
+          body: |
+            **Версия:** ${{ steps.build.outputs.version }}
+            **Коммит:** ${{ github.sha }}
           files: |
             1c-metadata-tree-book.epub
             1c-metadata-tree-book.fb2
